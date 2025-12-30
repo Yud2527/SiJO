@@ -4,13 +4,13 @@ import { COAItem, TransactionItem, JournalEntry } from "../types";
 
 /**
  * GENERATIVE AI CORE ENGINE (Gemini 3 Flash)
- * Menggunakan AI untuk pemetaan akun yang jauh lebih cerdas daripada heuristik biasa.
+ * Menggunakan SDK @google/genai yang merupakan standar terbaru untuk model Gemini.
  */
 export const generateJournalsWithAI = async (
   coa: COAItem[],
   transactions: TransactionItem[]
 ): Promise<JournalEntry[]> => {
-  // Selalu inisialisasi instance baru untuk memastikan menggunakan API KEY terbaru dari env
+  // Menginisialisasi client dengan API_KEY dari environment variable
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
@@ -28,8 +28,7 @@ export const generateJournalsWithAI = async (
     2. Jika Tipe 'DB' (Uang Keluar): Kredit akun Bank (Aset), Debit akun beban/utang/aset lainnya.
     3. Cari akun paling relevan dari COA di atas berdasarkan deskripsi.
     4. Buat narasi (narration) yang sangat profesional dan deskriptif.
-    5. ID transaksi harus tetap sama.
-    6. Return HARUS dalam format JSON ARRAY sesuai skema yang diminta.
+    5. Return dalam format JSON ARRAY yang valid.
   `;
 
   try {
@@ -68,11 +67,12 @@ export const generateJournalsWithAI = async (
       }
     });
 
-    const result = JSON.parse(response.text || "[]");
-    return result;
+    const text = response.text;
+    if (!text) throw new Error("Respons AI kosong.");
+    
+    return JSON.parse(text);
   } catch (error) {
     console.error("AI Processing Error:", error);
-    // Fallback minimal jika AI gagal
-    throw new Error("Gagal memproses data dengan AI. Pastikan format input benar.");
+    throw new Error("Gagal memproses data dengan AI. Pastikan API_KEY sudah dikonfigurasi di Vercel.");
   }
 };
