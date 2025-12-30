@@ -1,87 +1,78 @@
-import { COAItem, TransactionItem, JournalEntry, JournalLine } from "../types";
+
+import { GoogleGenAI, Type } from "@google/genai";
+import { COAItem, TransactionItem, JournalEntry } from "../types";
 
 /**
- * LOCAL SMART HEURISTICS ENGINE (100% Offline)
- * Berfungsi sebagai "Logic Builder" yang memproses transaksi secara lokal 
- * berdasarkan pemetaan kata kunci akuntansi yang luas.
+ * GENERATIVE AI CORE ENGINE (Gemini 3 Flash)
+ * Menggunakan AI untuk pemetaan akun yang jauh lebih cerdas daripada heuristik biasa.
  */
-
-const ACCOUNT_KEYWORDS: Record<string, string[]> = {
-  'Beban Listrik & Air': ['listrik', 'pln', 'token', 'pdam', 'air', 'telkom', 'wifi', 'internet'],
-  'Beban Gaji': ['gaji', 'payroll', 'salary', 'bonus', 'insentif', 'thr'],
-  'Beban Administrasi Bank': ['admin', 'biaya bank', 'adm', 'provisi', 'meterai'],
-  'Beban Sewa': ['sewa', 'rent', 'kontrak', 'leasing'],
-  'Beban Iklan': ['iklan', 'ads', 'facebook', 'google', 'marketing', 'promo'],
-  'Beban Perlengkapan Kantor': ['kertas', 'tinta', 'stationery', 'atk', 'perlengkapan', 'fotocopy'],
-  'Beban Kendaraan': ['bensin', 'bbm', 'pertamina', 'shell', 'parkir', 'tol', 'service', 'oli'],
-  'Pendapatan Jasa': ['jasa', 'konsultasi', 'fee', 'service income'],
-  'Pendapatan Penjualan': ['penjualan', 'sales', 'dagang', 'invoice', 'inv-'],
-  'Piutang Usaha': ['pelunasan', 'piutang', 'ar', 'receivable'],
-  'Utang Usaha': ['pembayaran utang', 'ap', 'payable', 'vendor'],
-};
-
 export const generateJournalsWithAI = async (
   coa: COAItem[],
   transactions: TransactionItem[]
 ): Promise<JournalEntry[]> => {
-  // Simulasi proses lokal yang sangat cepat
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // Selalu inisialisasi instance baru untuk memastikan menggunakan API KEY terbaru dari env
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  if (!transactions.length || !coa.length) return [];
+  const prompt = `
+    Anda adalah asisten akuntan profesional bersertifikat PSAK.
+    Tugas: Ubah data mutasi bank berikut menjadi entri jurnal akuntansi yang akurat.
 
-  // Cari akun Bank/Kas utama sebagai default
-  const bankAccount = coa.find(c => 
-    c.name.toLowerCase().includes('bank') || 
-    c.name.toLowerCase().includes('kas')
-  ) || coa[0];
+    DAFTAR AKUN (COA) YANG TERSEDIA:
+    ${JSON.stringify(coa.map(c => ({ code: c.code, name: c.name, cat: c.category })))}
 
-  return transactions.map((t) => {
-    const descLower = t.description.toLowerCase();
-    let match: COAItem | undefined;
+    DATA TRANSAKSI MUTASI:
+    ${JSON.stringify(transactions)}
 
-    // 1. Heuristik berdasarkan Kamus Cerdas
-    for (const [accountName, keywords] of Object.entries(ACCOUNT_KEYWORDS)) {
-      if (keywords.some(k => descLower.includes(k))) {
-        match = coa.find(c => c.name.toLowerCase() === accountName.toLowerCase());
-        if (match) break;
+    ATURAN PENJURNALAN:
+    1. Jika Tipe 'CR' (Uang Masuk): Debit akun Bank (Aset), Kredit akun pendapatan/piutang/lainnya.
+    2. Jika Tipe 'DB' (Uang Keluar): Kredit akun Bank (Aset), Debit akun beban/utang/aset lainnya.
+    3. Cari akun paling relevan dari COA di atas berdasarkan deskripsi.
+    4. Buat narasi (narration) yang sangat profesional dan deskriptif.
+    5. ID transaksi harus tetap sama.
+    6. Return HARUS dalam format JSON ARRAY sesuai skema yang diminta.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              date: { type: Type.STRING },
+              description: { type: Type.STRING },
+              narration: { type: Type.STRING },
+              lines: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    accountCode: { type: Type.STRING },
+                    accountName: { type: Type.STRING },
+                    debit: { type: Type.NUMBER },
+                    credit: { type: Type.NUMBER }
+                  },
+                  required: ["accountCode", "accountName", "debit", "credit"]
+                }
+              },
+              isValid: { type: Type.BOOLEAN }
+            },
+            required: ["id", "date", "description", "narration", "lines", "isValid"]
+          }
+        }
       }
-    }
+    });
 
-    // 2. Jika tidak ada di kamus, cari kecocokan nama akun secara parsial di COA
-    if (!match) {
-      match = coa.find(c => 
-        c.code !== bankAccount.code && 
-        (descLower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(descLower))
-      );
-    }
-
-    // 3. Fallback: Cari akun beban pertama jika uang keluar, atau pendapatan jika uang masuk
-    if (!match) {
-      if (t.type === 'DB') {
-        match = coa.find(c => c.category?.toLowerCase() === 'beban' || c.code.startsWith('6')) || coa[0];
-      } else {
-        match = coa.find(c => c.category?.toLowerCase() === 'pendapatan' || c.code.startsWith('4')) || coa[0];
-      }
-    }
-
-    const lines: JournalLine[] = [];
-    if (t.type === 'CR') {
-      // Uang Masuk
-      lines.push({ accountCode: bankAccount.code, accountName: bankAccount.name, debit: t.amount, credit: 0 });
-      lines.push({ accountCode: match.code, accountName: match.name, debit: 0, credit: t.amount });
-    } else {
-      // Uang Keluar
-      lines.push({ accountCode: match.code, accountName: match.name, debit: t.amount, credit: 0 });
-      lines.push({ accountCode: bankAccount.code, accountName: bankAccount.name, debit: 0, credit: t.amount });
-    }
-
-    return {
-      id: t.id,
-      date: t.date,
-      description: t.description,
-      narration: `${t.type === 'CR' ? 'Penerimaan' : 'Pembayaran'} atas ${t.description}`,
-      lines: lines,
-      isValid: true
-    };
-  });
+    const result = JSON.parse(response.text || "[]");
+    return result;
+  } catch (error) {
+    console.error("AI Processing Error:", error);
+    // Fallback minimal jika AI gagal
+    throw new Error("Gagal memproses data dengan AI. Pastikan format input benar.");
+  }
 };

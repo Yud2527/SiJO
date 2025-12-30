@@ -1,11 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SiJO - Sistem Jurnal Otomatis (Secure Local)</title>
+    <title>SiJO - Sistem Jurnal Otomatis (AI Powered)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
@@ -20,7 +21,7 @@
                 500: '#0ea5e9',
                 600: '#0284c7',
                 700: '#0369a1',
-                900: '#0c4a6e', // Deep Blue
+                900: '#0c4a6e',
               }
             }
           }
@@ -32,30 +33,28 @@
         font-family: 'Inter', sans-serif;
         background-color: #f8fafc;
       }
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
-    "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.4.0",
-    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2",
-    "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.0",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@^5.0.2",
+    "clsx": "https://esm.sh/clsx@^2.1.1"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
