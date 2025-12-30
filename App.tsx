@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, 
@@ -164,7 +165,9 @@ const App: React.FC = () => {
       localStorage.setItem('sijo_journals', JSON.stringify(results));
       setStatus(ProcessingStatus.COMPLETED);
     } catch (err: any) {
-      setError("Gagal memproses data secara lokal.");
+      // Show actual error message for debugging
+      console.error("Generate Error:", err);
+      setError(err.message || "Gagal memproses data secara lokal.");
       setStatus(ProcessingStatus.ERROR);
     }
   };
@@ -226,8 +229,8 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col items-center gap-4 py-10">
-                    {error && <div className="text-red-600 text-sm bg-red-50 px-6 py-3 rounded-xl border border-red-200 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" /> {error}
+                    {error && <div className="text-red-600 text-sm bg-red-50 px-6 py-3 rounded-xl border border-red-200 flex items-center gap-2 max-w-2xl text-center">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" /> {error}
                     </div>}
                     <Button 
                         size="lg" 
@@ -238,7 +241,7 @@ const App: React.FC = () => {
                         Generate Jurnal Otomatis <Sparkles className="ml-2 w-6 h-6" />
                     </Button>
                     <p className="text-slate-400 text-xs flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5" /> Diproses secara lokal untuk keamanan maksimal.
+                        <ShieldCheck className="w-3.5 h-3.5" /> Diproses menggunakan Gemini 3 Flash.
                     </p>
                 </div>
 

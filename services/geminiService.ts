@@ -4,14 +4,18 @@ import { COAItem, TransactionItem, JournalEntry } from "../types";
 
 /**
  * GENERATIVE AI CORE ENGINE (Gemini 3 Flash)
- * Menggunakan SDK @google/genai yang merupakan standar terbaru untuk model Gemini.
  */
 export const generateJournalsWithAI = async (
   coa: COAItem[],
   transactions: TransactionItem[]
 ): Promise<JournalEntry[]> => {
-  // Menginisialisasi client dengan API_KEY dari environment variable
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
+    throw new Error("API_KEY tidak ditemukan atau tidak valid. Silakan atur Environment Variable 'API_KEY' di Vercel dan lakukan REDEPLOY.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const prompt = `
     Anda adalah asisten akuntan profesional bersertifikat PSAK.
@@ -26,9 +30,9 @@ export const generateJournalsWithAI = async (
     ATURAN PENJURNALAN:
     1. Jika Tipe 'CR' (Uang Masuk): Debit akun Bank (Aset), Kredit akun pendapatan/piutang/lainnya.
     2. Jika Tipe 'DB' (Uang Keluar): Kredit akun Bank (Aset), Debit akun beban/utang/aset lainnya.
-    3. Cari akun paling relevan dari COA di atas berdasarkan deskripsi.
-    4. Buat narasi (narration) yang sangat profesional dan deskriptif.
-    5. Return dalam format JSON ARRAY yang valid.
+    3. Pilih akun yang paling spesifik dari daftar COA yang diberikan.
+    4. Buat narasi (narration) yang sangat profesional (misal: "Penerimaan piutang dari...", "Pembayaran beban listrik...").
+    5. Harus mengembalikan valid JSON ARRAY.
   `;
 
   try {
@@ -68,11 +72,21 @@ export const generateJournalsWithAI = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Respons AI kosong.");
+    if (!text) throw new Error("AI tidak mengembalikan hasil. Silakan coba lagi.");
     
     return JSON.parse(text);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Processing Error:", error);
-    throw new Error("Gagal memproses data dengan AI. Pastikan API_KEY sudah dikonfigurasi di Vercel.");
+    
+    // Handling specific API Errors
+    if (error.message?.includes("403") || error.message?.includes("API_KEY_INVALID")) {
+      throw new Error("API Key yang Anda gunakan tidak valid. Periksa kembali di Google AI Studio.");
+    }
+    
+    if (error.message?.includes("429")) {
+      throw new Error("Terlalu banyak permintaan (Rate limit). Tunggu sebentar dan coba lagi.");
+    }
+
+    throw new Error(error.message || "Terjadi kesalahan saat menghubungi server AI.");
   }
 };
