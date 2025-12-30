@@ -1,0 +1,5 @@
+{
+  "name": "SiJO - Sistem Jurnal Otomatis",
+  "description": "Aplikasi akuntansi berbasis AI untuk konversi transaksi rekening koran menjadi jurnal sesuai PSAK secara otomatis.",
+  "requestFramePermissions": []
+}
